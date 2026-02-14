@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClientLogAnalyzer - Executive Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="glow-text">ClientLogAnalyzer</h1>
+            <p class="subtitle">Interactive Intelligence Dashboard</p>
+
+            <div class="file-load-area">
+                <input type="file" id="log-file-input" accept=".txt,.log" hidden>
+                <button id="browse-upload-btn">Upload & Analyze New Log</button>
+                <div class="current-file-badge">Active: <span id="display-filename">Antonino MAZZONELLO.txt</span></div>
+            </div>
+        </header>
+
+        <section id="loader" class="glass-card">
+            <div class="spinner"></div>
+            <p id="loader-text">Analyzing large log file... Please wait.</p>
+        </section>
+
+
+        <main id="dashboard" class="hidden">
+            <!-- UX Executive Summary HERO -->
+            <section id="ux-assessment" class="glass-card ux-hero">
+                <div class="ux-score-container">
+                    <div id="ux-score-badge" class="ux-badge rating-5">5</div>
+                    <div class="ux-score-text">
+                        <h2 id="ux-score-title">Overall Experience: Good</h2>
+                        <p id="ux-score-message">Meeting seems successful with no major interruptions detected.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contextual Cards -->
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <h3>Browser</h3>
+                    <p id="browser-info" class="premium-value">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Machine / OS</h3>
+                    <p id="machine-info" class="premium-value small-text">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Webex Version</h3>
+                    <p id="webex-version" class="premium-value">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Platform</h3>
+                    <p id="platform-info" class="premium-value">-</p>
+                </div>
+            </div>
+
+            <!-- Media Diagnostics Priority Widget -->
+            <div class="glass-card wide-card media-primary-card">
+                <h2>Media Diagnostics Status</h2>
+                <div id="media-status-banner" class="status-banner"></div>
+                <div id="media-devices" class="device-list"></div>
+            </div>
+
+            <!-- Error Intelligence Grid -->
+            <div class="glass-card wide-card intelligence-card">
+                <h2>Top Error Intelligence</h2>
+                <p class="section-hint">Click any card to explore individual error instances below.</p>
+                <div id="error-clusters" class="cluster-grid"></div>
+            </div>
+
+            <!-- Error Explorer (Interactive) -->
+            <div id="explorer-container" class="glass-card wide-card explorer-card hidden">
+                <div class="explorer-header">
+                    <h2>Error Explorer: <span id="selected-cluster-name">Select a cluster</span></h2>
+                    <button id="close-explorer" class="close-btn">×</button>
+                </div>
+                <div id="explorer-list" class="scrollable-list full-list"></div>
+            </div>
+
+            <!-- AI Diagnosis Widget (Interactive) -->
+            <div id="diagnosis-container" class="glass-card wide-card diagnosis-card hidden">
+                <div class="diagnosis-header">
+                    <h2>AI Intelligence Diagnosis</h2>
+                    <div id="ai-status" class="ai-status">
+                        <div class="ai-pulse"></div>
+                        <span>Performing Real-time Analysis...</span>
+                    </div>
+                </div>
+                <div id="diagnosis-content" class="diagnosis-grid hidden">
+                    <div class="diag-item">
+                        <h4>Likely Reason</h4>
+                        <p id="diag-reason">-</p>
+                    </div>
+                    <div class="diag-item">
+                        <h4>Technical Root Cause</h4>
+                        <p id="diag-detail">-</p>
+                    </div>
+                    <div class="diag-item highlight-diag">
+                        <h4>Recommended Action</h4>
+                        <p id="diag-solution">-</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
