@@ -79,7 +79,20 @@ app.get('/api/analyze', (req, res) => {
     const logFilePath = path.join(__dirname, requestedFile);
 
     if (!fs.existsSync(logFilePath)) {
-        return res.status(404).json({ error: `Log file "${requestedFile}" not found.` });
+        console.log(`[API] Log file "${requestedFile}" not found. Returning empty state.`);
+        return res.json({
+            status: 'awaiting_upload',
+            currentFile: 'None (Global Dashboard)',
+            metadata: { webexVersion: 'N/A', platform: 'N/A', browser: 'N/A', machine: 'N/A' },
+            uxSummary: { score: 'Ready', rating: 5, message: 'Please upload a Webex audit log file to begin real-time diagnostic analysis.' },
+            diagnostics: {
+                network: { status: 'healthy', issues: [], reachability: [], latency: [] },
+                media: { status: 'healthy', issues: [], devices: { cameras: [], microphones: [], speakers: [] } },
+                security: { status: 'healthy', issues: [] },
+                performance: { cpuSpeed: null, benchmarks: [] }
+            },
+            errorClusters: []
+        });
     }
 
     const results = {

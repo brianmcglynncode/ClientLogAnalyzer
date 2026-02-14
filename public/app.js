@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             dashboard.classList.add('hidden');
             explorerContainer.classList.add('hidden');
             diagnosisContainer.classList.add('hidden');
-            loaderText.textContent = filename ? `Analyzing ${filename}...` : 'Analyzing default log...';
+            loaderText.textContent = filename ? `Analyzing ${filename}...` : 'Initializing Dashboard...';
 
             const url = filename ? `/api/analyze?file=${encodeURIComponent(filename)}` : '/api/analyze';
             const response = await fetch(url);
@@ -35,8 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Analysis Error:', error);
             loader.innerHTML = `
                 <div class="glass-card">
-                    <p style="color: #ff4b2b; font-weight: 600;">Analysis failed: ${error.message}</p>
-                    <button onclick="location.reload()" style="margin-top: 15px; background: var(--accent-blue); border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600;">Retry Defaults</button>
+                    <p style="color: #ff4b2b; font-weight: 600;">Startup Error: ${error.message}</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">The intelligence engine is active, but couldn't load the default log. You can still upload a log file below.</p>
+                    <button onclick="document.getElementById('log-file-input').click()" style="margin-top: 15px; background: var(--accent-blue); border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600;">Upload Audit Log</button>
+                    <button onclick="location.reload()" style="margin-top: 15px; background: rgba(255,255,255,0.1); border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; color: #fff; margin-left: 10px;">Retry</button>
                 </div>`;
         }
     }
@@ -91,20 +93,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('ux-assessment').style.borderColor = { 5: '#00ff88', 3: '#f9d423', 2: '#ff4b2b' }[data.uxSummary.rating];
 
         // 2. Metadata Cards
-        document.getElementById('browser-info').textContent = data.metadata.browser || 'Unknown';
+        document.getElementById('browser-info').textContent = data.metadata.browser || 'N/A';
         document.getElementById('webex-version').textContent = data.metadata.webexVersion || 'N/A';
         document.getElementById('platform-info').textContent = data.metadata.platform || 'N/A';
         document.getElementById('machine-info').textContent = data.metadata.machine || 'N/A';
 
-        // 3. Media Diagnostics
+        // 3. Media Diagnostics & Empty State
         const mediaBanner = document.getElementById('media-status-banner');
+        const clusterContainer = document.getElementById('error-clusters');
+        const deviceList = document.getElementById('media-devices');
+
+        if (data.status === 'awaiting_upload') {
+            mediaBanner.innerHTML = `<p style="color: var(--accent-blue)">✨ Diagnostic Engine Online. Please upload a Webex audit log file to generate a deep analysis.</p>`;
+            clusterContainer.innerHTML = `
+                <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 60px; opacity: 0.6; border: 1px dashed rgba(255,255,255,0.2);">
+                    <p style="font-size: 1.1rem;">Waiting for diagnostic data...</p>
+                    <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 10px;">Upload your .txt log using the "Upload & Analyze" button at the top.</p>
+                </div>`;
+            deviceList.innerHTML = '';
+            loader.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+            return;
+        }
+
         if (data.diagnostics.media.devices.microphones.length === 0 || data.diagnostics.media.devices.cameras.length === 0) {
             mediaBanner.innerHTML = `<p style="color: #ff4b2b">⚠️ Critical warning: Missing hardware paths. Check client connections.</p>`;
         } else {
             mediaBanner.innerHTML = `<p style="color: #00ff88">✓ Audio and Video systems are correctly initialized.</p>`;
         }
 
-        const deviceList = document.getElementById('media-devices');
         deviceList.innerHTML = '';
         const cats = {
             'Microphones': data.diagnostics.media.devices.microphones,
@@ -119,7 +136,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 4. Error Clusters (Interactive)
-        const clusterContainer = document.getElementById('error-clusters');
         clusterContainer.innerHTML = '';
         data.errorClusters.forEach(cluster => {
             const div = document.createElement('div');
