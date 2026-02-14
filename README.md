@@ -6,6 +6,7 @@ ClientLogAnalyzer is a premium, interactive diagnostic suite designed to transfo
 
 - **Executive UX Summary**: Automated assessment of meeting quality (1-5 rating) based on error density and critical failures.
 - **AI-Powered Diagnosis**: Real-time analysis of error clusters providing Likely Reasons, Technical Root Causes, and Recommended Actions.
+- **Cloud-Ready Startup**: Automatically detects empty environments (like new Railway/Heroku deploys) and prompts for a log upload rather than failing.
 - **Local Log Upload**: Securely upload and analyze any `.txt` or `.log` file from your machine using an integrated `multer` backend.
 - **Media Diagnostics**: Prioritized view of hardware health, including microphone, camera, and speaker initialization status.
 - **Intelligent Error Clustering**: Automatically groups 50,000+ log lines into unique, actionable issues, filtering out heartbeat noise.
