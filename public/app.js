@@ -10,6 +10,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const diagnosisContainer = document.getElementById('diagnosis-container');
     const diagnosisContent = document.getElementById('diagnosis-content');
     const aiStatus = document.getElementById('ai-status');
+    const hbBrowseBtn = document.getElementById('hb-browse-upload-btn');
+    const hbFileInput = document.getElementById('hb-file-input');
+
+    let currentMode = 'meeting';
+
+    window.switchMode = function (mode) {
+        currentMode = mode;
+
+        // Update Buttons
+        document.getElementById('btn-meeting-logs').classList.toggle('active', mode === 'meeting');
+        document.getElementById('btn-heartbeats').classList.toggle('active', mode === 'heartbeat');
+
+        // Update Headers
+        document.getElementById('meeting-header').classList.toggle('hidden', mode !== 'meeting');
+        document.getElementById('heartbeat-header').classList.toggle('hidden', mode !== 'heartbeat');
+
+        // Update Dashboards
+        dashboard.classList.toggle('hidden', mode !== 'meeting');
+        document.getElementById('heartbeat-dashboard').classList.toggle('hidden', mode !== 'heartbeat');
+
+        // Hide common overlays
+        loader.classList.add('hidden');
+        explorerContainer.classList.add('hidden');
+        diagnosisContainer.classList.add('hidden');
+
+        if (mode === 'meeting') {
+            fetchAndRender(); // Load default log
+        } else {
+            console.log('[App] Switching to Heartbeat mode');
+            window.fetchAndRenderHeartbeat(); // Load default heartbeat
+        }
+    };
 
     async function fetchAndRender(filename = '') {
         try {
@@ -28,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const data = await response.json();
+            console.log('[App] Received Analysis Data:', data);
             displayFilename.textContent = data.currentFile;
             renderDashboard(data);
 
@@ -92,7 +125,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('ux-score-message').textContent = data.uxSummary.message;
         document.getElementById('ux-assessment').style.borderColor = { 5: '#00ff88', 3: '#f9d423', 2: '#ff4b2b' }[data.uxSummary.rating];
 
-        // 2. Metadata Cards
+        // 1.5 Timing Metadata
+        if (data.timing) {
+            document.getElementById('meeting-entry').textContent = data.timing.entryTime !== 'N/A' ? formatTime(data.timing.entryTime) : 'N/A';
+            document.getElementById('meeting-exit').textContent = data.timing.exitTime !== 'N/A' ? formatTime(data.timing.exitTime) : 'N/A';
+            document.getElementById('meeting-duration').textContent = data.timing.duration;
+        }
+
+        // 2. Metadata Cards & Global Counter
+        if (data.globalStats) {
+            const counterBadge = document.getElementById('total-analyzed-badge');
+            if (counterBadge) counterBadge.textContent = data.globalStats.totalFilesAnalyzed || 0;
+        }
+
         document.getElementById('browser-info').textContent = data.metadata.browser || 'N/A';
         document.getElementById('webex-version').textContent = data.metadata.webexVersion || 'N/A';
         document.getElementById('platform-info').textContent = data.metadata.platform || 'N/A';
@@ -100,16 +145,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 3. Media Diagnostics & Empty State
         const mediaBanner = document.getElementById('media-status-banner');
-        const clusterContainer = document.getElementById('error-clusters');
         const deviceList = document.getElementById('media-devices');
 
         if (data.status === 'awaiting_upload') {
             mediaBanner.innerHTML = `<p style="color: var(--accent-blue)">✨ Diagnostic Engine Online. Please upload a Webex audit log file to generate a deep analysis.</p>`;
-            clusterContainer.innerHTML = `
-                <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 60px; opacity: 0.6; border: 1px dashed rgba(255,255,255,0.2);">
-                    <p style="font-size: 1.1rem;">Waiting for diagnostic data...</p>
-                    <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 10px;">Upload your .txt log using the "Upload & Analyze" button at the top.</p>
-                </div>`;
+            ['high', 'medium', 'low'].forEach(id => {
+                const container = document.getElementById(`errors-${id}`);
+                if (container) {
+                    container.innerHTML = `
+                        <div class="no-issues-mini" style="padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+                            Waiting for diagnostic data...
+                        </div>`;
+                }
+            });
             deviceList.innerHTML = '';
             loader.classList.add('hidden');
             dashboard.classList.remove('hidden');
@@ -135,20 +183,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             deviceList.appendChild(devDiv);
         }
 
-        // 4. Error Clusters (Interactive)
-        clusterContainer.innerHTML = '';
-        data.errorClusters.forEach(cluster => {
-            const div = document.createElement('div');
-            div.className = 'cluster-item';
-            div.innerHTML = `
-                <div class="cluster-info">
-                    <p>${cluster.message}</p>
-                    <span class="cluster-tag">${cluster.category}</span>
-                </div>
-                <div class="cluster-count">${cluster.count}x</div>
-            `;
-            div.onclick = () => selectCluster(cluster);
-            clusterContainer.appendChild(div);
+        // 4. Error Clusters (Categorized)
+        // Render timing & disconnects
+        document.getElementById('meeting-duration').textContent = data.timing.duration;
+        document.getElementById('meeting-entry').textContent = data.timing.entryTime !== 'N/A' ? new Date(data.timing.entryTime).toLocaleTimeString() : 'N/A';
+        document.getElementById('meeting-exit').textContent = data.timing.exitTime !== 'N/A' ? new Date(data.timing.exitTime).toLocaleTimeString() : 'N/A';
+
+        const discBadge = document.getElementById('disconnects-badge');
+        document.getElementById('meeting-disconnects').textContent = data.disconnectCount;
+        if (data.disconnectCount > 0) {
+            discBadge.classList.add('warning-active');
+        } else {
+            discBadge.classList.remove('warning-active');
+        }
+
+        // Render Error Intelligence Sections
+        const categoryIds = ['high', 'medium', 'low'];
+        categoryIds.forEach(id => {
+            const container = document.getElementById(`errors-${id}`);
+            container.innerHTML = '';
+
+            const filtered = data.errorClusters.filter(c => c.severity.toLowerCase() === id);
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="no-issues-mini">No ${id} severity issues detected</div>`;
+            } else {
+                filtered.forEach(cluster => {
+                    const item = document.createElement('div');
+                    item.className = 'cluster-item-mini';
+                    item.onclick = () => selectCluster(cluster);
+
+                    item.innerHTML = `
+                    <div class="cluster-info">
+                        <div class="cluster-msg-mini">${cluster.message}</div>
+                    </div>
+                    <div class="cluster-meta-mini">
+                        <span class="cluster-tag-mini">${cluster.category.toUpperCase()}</span>
+                        <div class="cluster-badge">${cluster.count} Events</div>
+                    </div>
+                `;
+                    container.appendChild(item);
+                });
+            }
         });
 
         loader.classList.add('hidden');
@@ -174,18 +249,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         aiStatus.classList.remove('hidden');
 
         try {
+            console.log(`[App] Fetching diagnosis for: ${cluster.id}`);
             const response = await fetch(`/api/diagnose?clusterId=${encodeURIComponent(cluster.id)}&category=${encodeURIComponent(cluster.category)}`);
             const diag = await response.json();
+            console.log('[App] Received Diagnosis:', diag);
 
-            document.getElementById('diag-reason').textContent = diag.likelyReason;
-            document.getElementById('diag-detail').textContent = diag.technicalDetail;
-            document.getElementById('diag-solution').textContent = diag.solution;
+            const reasonEl = document.getElementById('diag-reason');
+            const detailEl = document.getElementById('diag-detail');
+            const solutionEl = document.getElementById('diag-solution');
+
+            if (reasonEl) reasonEl.textContent = diag.likelyReason || '-';
+            if (detailEl) detailEl.textContent = diag.technicalDetail || '-';
+            if (solutionEl) solutionEl.textContent = diag.solution || '-';
 
             aiStatus.classList.add('hidden');
             diagnosisContent.classList.remove('hidden');
         } catch (e) {
-            console.error('Diagnosis lookup failed:', e);
-            aiStatus.innerHTML = '<span style="color: var(--danger)">Diagnosis unavailable.</span>';
+            console.error('[App] Diagnosis failed:', e);
+            aiStatus.classList.add('hidden');
         }
 
         explorerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -194,10 +275,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event Listeners
     browseUploadBtn.onclick = () => logFileInput.click();
     logFileInput.onchange = handleFileUpload;
+
+    hbBrowseBtn.onclick = () => hbFileInput.click();
+    hbFileInput.onchange = (e) => handleHeartbeatUpload(e);
+
     document.getElementById('close-explorer').onclick = () => {
         explorerContainer.classList.add('hidden');
         diagnosisContainer.classList.add('hidden');
     };
+
+    async function handleHeartbeatUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            loader.classList.remove('hidden');
+            document.getElementById('heartbeat-dashboard').classList.add('hidden');
+            loaderText.textContent = `Uploading Heartbeat ${file.name}...`;
+
+            const formData = new FormData();
+            formData.append('logFile', file);
+
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Upload failed');
+            const result = await response.json();
+            console.log('[App] Heartbeat upload success:', result.filename);
+
+            setTimeout(() => {
+                window.fetchAndRenderHeartbeat(result.filename);
+            }, 500);
+
+        } catch (error) {
+            console.error('HB Upload Error:', error);
+            alert(`HB Upload failed: ${error.message}`);
+            loader.classList.add('hidden');
+        }
+    }
 
     // Initial Load
     fetchAndRender();

@@ -3,6 +3,28 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
+const STATS_FILE = path.join(__dirname, 'stats.json');
+
+// Initialize stats
+function getStats() {
+    try {
+        if (fs.existsSync(STATS_FILE)) {
+            return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+        }
+    } catch (e) {
+        console.error('[Stats] Error reading stats:', e);
+    }
+    return { totalFilesAnalyzed: 0 };
+}
+
+function saveStats(stats) {
+    try {
+        fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+    } catch (e) {
+        console.error('[Stats] Error saving stats:', e);
+    }
+}
+
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -72,14 +94,45 @@ app.get('/api/diagnose', (req, res) => {
     }, 1200);
 });
 
+// Heartbeat Analysis Endpoint
+app.get('/api/heartbeat', (req, res) => {
+    const requestedFile = req.query.file || 'Heartbeat.txt';
+    console.log(`[API] Heartbeat Fetch for: ${requestedFile}`);
+
+    const filePath = path.join(__dirname, requestedFile);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Heartbeat file not found' });
+    }
+
+    try {
+        const dataBuffer = fs.readFileSync(filePath, 'utf8');
+        // Check if it's already JSON or if we need to wrap it
+        let jsonData;
+        try {
+            jsonData = JSON.parse(dataBuffer);
+        } catch (e) {
+            // If it's the raw Heartbeat.txt format often seen in logs (JSON-like but maybe not perfect)
+            // For now assume it's valid JSON if we want to parse it as such
+            throw new Error('Invalid JSON format');
+        }
+        res.json(jsonData);
+    } catch (err) {
+        console.error('[Heartbeat] Critical Fault:', err);
+        res.status(500).json({ error: 'Failed to parse heartbeat data' });
+    }
+});
+
 app.get('/api/analyze', (req, res) => {
     const requestedFile = req.query.file || 'Antonino MAZZONELLO.txt';
     console.log(`[API] Deep Analysis for: ${requestedFile}`);
 
-    const logFilePath = path.join(__dirname, requestedFile);
+    const logFilePath = requestedFile.includes(':') || requestedFile.startsWith('/')
+        ? requestedFile
+        : path.join(__dirname, requestedFile);
 
     if (!fs.existsSync(logFilePath)) {
-        console.log(`[API] Log file "${requestedFile}" not found. Returning empty state.`);
+        console.log(`[API] Log file "${requestedFile}" not found at ${logFilePath}. Returning empty state.`);
         return res.json({
             status: 'awaiting_upload',
             currentFile: 'None (Global Dashboard)',
@@ -91,7 +144,8 @@ app.get('/api/analyze', (req, res) => {
                 security: { status: 'healthy', issues: [] },
                 performance: { cpuSpeed: null, benchmarks: [] }
             },
-            errorClusters: []
+            errorClusters: [],
+            lifecycleInsights: []
         });
     }
 
@@ -99,25 +153,49 @@ app.get('/api/analyze', (req, res) => {
         currentFile: requestedFile,
         metadata: { webexVersion: 'N/A', platform: 'N/A', browser: 'N/A', machine: 'N/A' },
         uxSummary: { score: 'Good', rating: 5, message: 'Meeting seems successful with no major interruptions detected.' },
+        timing: { entryTime: 'N/A', exitTime: 'N/A', duration: 'N/A' },
+        disconnectCount: 0,
         diagnostics: {
             network: { status: 'healthy', issues: [], reachability: [], latency: [] },
             media: { status: 'healthy', issues: [], devices: { cameras: [], microphones: [], speakers: [] } },
             security: { status: 'healthy', issues: [] },
             performance: { cpuSpeed: null, benchmarks: [] }
         },
-        errorClusters: []
+        errorClusters: [],
+        lifecycleInsights: []
     };
+
+    console.log(`[Analyzer] Starting analysis of: ${requestedFile}`);
 
     try {
         const dataBuffer = fs.readFileSync(logFilePath, 'utf8');
         const lines = dataBuffer.split(/\r?\n/);
+        console.log(`[Analyzer] Total lines to process: ${lines.length}`);
         const rawErrors = [];
         let criticalFailures = 0;
+        let firstTimestamp = null;
+        let lastTimestamp = null;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
+
+            // Extract the timestamp from the beginning of the line
+            const timestampMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
+            if (timestampMatch) {
+                const ts = timestampMatch[0];
+                if (!firstTimestamp) firstTimestamp = ts;
+                lastTimestamp = ts;
+            }
+
             const contentLower = line.toLowerCase();
+
+            // 0. Disconnect / Reconnect Detection
+            if (contentLower.includes('web socket offline') ||
+                contentLower.includes('mercury connection lost') ||
+                contentLower.includes('network error') && contentLower.includes('disconnected')) {
+                results.disconnectCount++;
+            }
 
             // 1. Metadata Deep Extraction
             if (i < 5000 && contentLower.includes('pagespec') && contentLower.includes('{')) {
@@ -167,6 +245,44 @@ app.get('/api/analyze', (req, res) => {
                 } catch (e) { }
             }
 
+            // 2.5 Lifecycle & Social Insights
+            const ts = line.substring(0, 24);
+            if (contentLower.includes('davralocation:')) {
+                const marker = 'davralocation:';
+                const startPos = contentLower.indexOf(marker);
+                const loc = line.substring(startPos + marker.length).trim();
+                console.log(`[Analyzer] Found Navigation: ${loc}`);
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Navigation', message: `Page Loaded: ${loc}`, icon: '📍' });
+            } else if (contentLower.includes('webex ready')) {
+                results.lifecycleInsights.push({ timestamp: ts, type: 'SDK', message: 'Webex SDK Ready', icon: '🚀' });
+            } else if (contentLower.includes('device registered')) {
+                results.lifecycleInsights.push({ timestamp: ts, type: 'SDK', message: 'Device Registered on Webex Platform', icon: '🆔' });
+            } else if (contentLower.includes('h264 codec loaded successfully')) {
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Performance', message: 'H264 Codec Initialized (Hardware Acceleration)', icon: '📽️' });
+            } else if (contentLower.includes('visibility changed to')) {
+                const state = line.substring(contentLower.indexOf('visibility changed to') + 21).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Activity', message: `User Visibility: ${state}`, icon: '👀' });
+            } else if (contentLower.includes('found new participant')) {
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Social', message: 'New participant joined meeting', icon: '👤' });
+            } else if (contentLower.includes('successfully reached') && contentLower.includes('over udp')) {
+                const cluster = line.substring(contentLower.indexOf('reached') + 7, contentLower.indexOf('over')).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Network', message: `Media Cluster Reachable: ${cluster}`, icon: '📡' });
+            } else if (contentLower.includes('noteresults: issue')) {
+                const msg = line.substring(contentLower.indexOf('issue') + 6).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Diagnostic', message: `Critical Issue: ${msg}`, icon: '⚠️' });
+            } else if (contentLower.includes('issue :')) {
+                const msg = line.substring(contentLower.indexOf('issue :') + 7).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Diagnostic', message: `Issue Detected: ${msg}`, icon: '🚧' });
+            } else if (contentLower.includes('countissues')) {
+                const count = line.substring(contentLower.indexOf('countissues') + 12).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Diagnostic', message: `System-wide issues detected: ${count}`, icon: '📊' });
+            } else if (contentLower.includes('benchmark') && contentLower.includes(': {')) {
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Performance', message: 'System Benchmark Completed', icon: '🏎️' });
+            } else if (contentLower.includes('latency test took too long')) {
+                const val = line.substring(contentLower.indexOf('long:') + 5).trim();
+                results.lifecycleInsights.push({ timestamp: ts, type: 'Performance', message: `High network latency detected: ${val}ms`, icon: '⏳' });
+            }
+
             // 3. Error Detection
             const isError = line.includes(':ERROR:') ||
                 (contentLower.includes('error') && !contentLower.includes('no error') && !line.includes('logger#log'));
@@ -200,12 +316,47 @@ app.get('/api/analyze', (req, res) => {
         }
 
         // 5. Clustering
+        function categorizeError(msg, clusterKey) {
+            const m = msg.toLowerCase();
+
+            // HIGH: Direct WebRTC service impact, protocol failures, or hard disconnects
+            if (clusterKey === 'ROAP_PROTOCOL_EVENT_CONSOLIDATED' ||
+                m.includes('web socket offline') ||
+                m.includes('websocket reconnected') ||
+                (m.includes('waitforicecandidates') && m.includes('mc-8784')) ||
+                m.includes('rejoincurrentmeeting') ||
+                m.includes('connection lost') ||
+                m.includes('media pipeline') ||
+                m.includes('failed to start') ||
+                m.includes('ice connection state failed')) {
+                return 'High';
+            }
+
+            // MEDIUM: Operational anomalies, UI glitches, or transient errors that might be noticeable
+            if (m.includes('failed to sync') ||
+                m.includes('resource parameter is required') ||
+                m.includes('waitforicecandidates') ||
+                m.includes('cannot change video layout') ||
+                m.includes('typeerror') ||
+                m.includes('timeout') ||
+                m.includes('retry') ||
+                m.includes('mercury') ||
+                m.includes('auth')) {
+                return 'Medium';
+            }
+
+            // LOW: Everything else (background notes, minor serialization, telemetry pings)
+            return 'Low';
+        }
+
         const clusters = {};
         rawErrors.forEach(err => {
             const msg = err.message.toLowerCase();
             if (msg.includes('heartbeat')) return;
 
             if (!clusters[err.clusterKey]) {
+                const severity = categorizeError(err.message, err.clusterKey);
+
                 let category = 'Application Error';
                 if (err.clusterKey === 'ROAP_PROTOCOL_EVENT_CONSOLIDATED') category = 'Media Protocol (ROAP)';
                 else if (msg.includes('downscope')) category = 'Security';
@@ -231,6 +382,7 @@ app.get('/api/analyze', (req, res) => {
                     message: cleanMsg.substring(0, 100),
                     count: 0,
                     category: category,
+                    severity: severity,
                     instances: []
                 };
             }
@@ -244,10 +396,33 @@ app.get('/api/analyze', (req, res) => {
             .sort((a, b) => b.count - a.count)
             .slice(0, 25);
 
+        // 6. Timing Metadata
+        if (firstTimestamp && lastTimestamp) {
+            console.log(`[Analyzer] Extracted Timing: ${firstTimestamp} to ${lastTimestamp}`);
+            results.timing.entryTime = firstTimestamp;
+            results.timing.exitTime = lastTimestamp;
+            const diffMs = new Date(lastTimestamp) - new Date(firstTimestamp);
+            const totalMinutes = Math.floor(diffMs / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            results.timing.duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        } else {
+            console.log('[Analyzer] Warning: No timestamps extracted from log.');
+        }
+
+        // 5. Success
+        console.log(`[API] Analysis Complete for: ${targetFile}`);
+
     } catch (err) {
         console.error('[Analyzer] Critical Fault:', err);
     }
 
+    // Global Counter Incremement
+    const stats = getStats();
+    stats.totalFilesAnalyzed = (stats.totalFilesAnalyzed || 0) + 1;
+    saveStats(stats);
+
+    results.globalStats = stats;
     res.json(results);
 });
 

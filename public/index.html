@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -17,15 +18,43 @@
         <div class="blob blob-3"></div>
     </div>
 
+    <nav class="top-nav">
+        <div class="nav-container">
+            <button id="btn-meeting-logs" class="nav-btn active" onclick="switchMode('meeting')">
+                <span class="btn-icon">📊</span> Meeting Logs
+            </button>
+            <button id="btn-heartbeats" class="nav-btn" onclick="switchMode('heartbeat')">
+                <span class="btn-icon">❤️</span> Heartbeats
+            </button>
+        </div>
+    </nav>
+
     <div class="container">
-        <header>
+        <header id="meeting-header">
             <h1 class="glow-text">ClientLogAnalyzer</h1>
             <p class="subtitle">Interactive Intelligence Dashboard</p>
 
             <div class="file-load-area">
                 <input type="file" id="log-file-input" accept=".txt,.log" hidden>
                 <button id="browse-upload-btn">Upload & Analyze New Log</button>
-                <div class="current-file-badge">Active: <span id="display-filename">Antonino MAZZONELLO.txt</span></div>
+                <div class="header-main">
+                    <div class="current-file-badge">Active: <span id="display-filename">Bilal Today.txt</span></div>
+                    <div id="total-analyzed-container" class="analyzed-counter">
+                        <span class="counter-label">Files Analyzed Total:</span>
+                        <span id="total-analyzed-badge" class="counter-badge">0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <header id="heartbeat-header" class="hidden">
+            <h1 class="glow-text">System Heartbeats</h1>
+            <p class="subtitle">Real-time Performance & Health Analytics</p>
+
+            <div class="file-load-area">
+                <input type="file" id="hb-file-input" accept=".txt,.json" hidden>
+                <button id="hb-browse-upload-btn">Upload & Analyze Heartbeat</button>
+                <div class="current-file-badge">Active: <span id="id-heartbeat-filename">Heartbeat.txt</span></div>
             </div>
         </header>
 
@@ -43,6 +72,25 @@
                     <div class="ux-score-text">
                         <h2 id="ux-score-title">Overall Experience: Good</h2>
                         <p id="ux-score-message">Meeting seems successful with no major interruptions detected.</p>
+                    </div>
+                </div>
+                <div class="timing-badges">
+                    <div class="time-badge">
+                        <span class="label">Entered</span>
+                        <span id="meeting-entry" class="value">--:--:--</span>
+                    </div>
+                    <div class="time-badge">
+                        <span class="label">Left</span>
+                        <span id="meeting-exit" class="value">--:--:--</span>
+                    </div>
+                    <div class="time-badge duration">
+                        <span class="label">Total duration</span>
+                        <span id="meeting-duration" class="value">--h --m</span>
+                    </div>
+                    <div class="time-badge disconnects" id="disconnects-badge"
+                        title="Potential connection drops detected">
+                        <span class="label">Disconnects</span>
+                        <span id="meeting-disconnects" class="value">0</span>
                     </div>
                 </div>
             </section>
@@ -78,7 +126,21 @@
             <div class="glass-card wide-card intelligence-card">
                 <h2>Top Error Intelligence</h2>
                 <p class="section-hint">Click any card to explore individual error instances below.</p>
-                <div id="error-clusters" class="cluster-grid"></div>
+
+                <div class="error-intelligence-grid">
+                    <div class="error-category-section severity-high">
+                        <div class="category-header">Critical Failures (High) 🔴</div>
+                        <div id="errors-high" class="cluster-grid-mini"></div>
+                    </div>
+                    <div class="error-category-section severity-medium">
+                        <div class="category-header">System Anomalies (Medium) 🟡</div>
+                        <div id="errors-medium" class="cluster-grid-mini"></div>
+                    </div>
+                    <div class="error-category-section severity-low">
+                        <div class="category-header">Operational Notes (Low) 🔵</div>
+                        <div id="errors-low" class="cluster-grid-mini"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Error Explorer (Interactive) -->
@@ -89,7 +151,6 @@
                 </div>
                 <div id="explorer-list" class="scrollable-list full-list"></div>
             </div>
-
             <!-- AI Diagnosis Widget (Interactive) -->
             <div id="diagnosis-container" class="glass-card wide-card diagnosis-card hidden">
                 <div class="diagnosis-header">
@@ -105,7 +166,7 @@
                         <p id="diag-reason">-</p>
                     </div>
                     <div class="diag-item">
-                        <h4>Technical Root Cause</h4>
+                        <h4>Technical Detail</h4>
                         <p id="diag-detail">-</p>
                     </div>
                     <div class="diag-item highlight-diag">
@@ -116,7 +177,56 @@
             </div>
 
         </main>
+
+        <!-- Heartbeat Dashboard -->
+        <main id="heartbeat-dashboard" class="hidden">
+            <section id="hb-health-hero" class="glass-card hb-hero">
+                <div class="hb-status-container">
+                    <div id="hb-overall-status" class="hb-badge status-healthy">✓</div>
+                    <div class="hb-status-text">
+                        <h2 id="hb-status-title">System Status: Healthy</h2>
+                        <p id="hb-status-message">All diagnostic checks passed in the latest heartbeat.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <h3>Microphones</h3>
+                    <p id="hb-mics-count" class="premium-value">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Cameras</h3>
+                    <p id="hb-cams-count" class="premium-value">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Webex Version</h3>
+                    <p id="hb-webex-version" class="premium-value">-</p>
+                </div>
+                <div class="glass-card stat-card">
+                    <h3>Latency (Avg)</h3>
+                    <p id="hb-latency-avg" class="premium-value">-</p>
+                </div>
+            </div>
+
+            <div class="glass-card wide-card chart-container">
+                <h2>Connection Latency Trend</h2>
+                <canvas id="hb-latency-chart"></canvas>
+            </div>
+
+            <div class="glass-card wide-card diagnostic-grid-card">
+                <h2>Health Diagnostics</h2>
+                <div id="hb-checks-grid" class="hb-checks-grid"></div>
+            </div>
+
+            <div class="glass-card wide-card events-card">
+                <h2>Heartbeat Event Logs</h2>
+                <div id="hb-event-list" class="scrollable-list"></div>
+            </div>
+        </main>
+
     </div>
+    <script src="heartbeat_analyzer.js"></script>
     <script src="app.js"></script>
 </body>
 
