@@ -316,6 +316,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // PDF Download Logic
+    document.getElementById('download-pdf-btn').onclick = () => {
+        const element = document.getElementById('dashboard');
+        const originalOverflow = element.style.overflow;
+        element.style.overflow = 'visible'; // Ensure full height is captured
+
+        // Clone to modify for print structure if needed (optional, keeping simple for now)
+        const opt = {
+            margin: [10, 10, 10, 10], // top, left, bottom, right
+            filename: `ClientLogReport_${displayFilename.textContent}_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Add a temporary title for the PDF
+        const titleDiv = document.createElement('div');
+        titleDiv.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px; color: #000;">
+                <h1 style="font-size: 24px; margin: 0;">Client Log Analysis Report</h1>
+                <p style="font-size: 14px; margin: 5px 0;">File: ${displayFilename.textContent}</p>
+                <p style="font-size: 12px; color: #666;">Generated: ${new Date().toLocaleString()}</p>
+            </div>
+        `;
+        
+        // Wrap logic to include title
+        const contentContainer = document.createElement('div');
+        contentContainer.appendChild(titleDiv);
+        contentContainer.appendChild(element.cloneNode(true));
+        
+        // Adjust styles for PDF specific container (forcing light theme for readability or keeping dark)
+        // For this app, let's keep the dark theme aesthetic but ensure it fits
+        contentContainer.style.background = '#05070a'; 
+        contentContainer.style.color = '#e0e0e0';
+        contentContainer.style.padding = '20px';
+        contentContainer.querySelectorAll('.glass-card').forEach(card => {
+            card.style.background = 'rgba(255, 255, 255, 0.1)'; // Slightly more opaque for PDF
+            card.style.boxShadow = 'none';
+        });
+
+        html2pdf().set(opt).from(contentContainer).save().then(() => {
+            element.style.overflow = originalOverflow;
+        });
+    };
+
     // Initial Load
     fetchAndRender();
 });

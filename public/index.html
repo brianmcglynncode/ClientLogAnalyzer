@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -43,6 +44,9 @@
                         <span class="counter-label">Files Analyzed Total:</span>
                         <span id="total-analyzed-badge" class="counter-badge">0</span>
                     </div>
+                    <button id="download-pdf-btn" class="icon-btn" title="Download Report as PDF">
+                        ⬇️ PDF
+                    </button>
                 </div>
             </div>
         </header>
