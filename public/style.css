@@ -239,6 +239,13 @@ h1 {
     border-color: rgba(255, 255, 255, 0.2);
 }
 
+@media print {
+    .glass-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+
 /* UX HERO */
 .ux-hero {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);

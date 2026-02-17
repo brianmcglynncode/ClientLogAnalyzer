@@ -322,13 +322,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const originalOverflow = element.style.overflow;
         element.style.overflow = 'visible'; // Ensure full height is captured
 
-        // Clone to modify for print structure if needed (optional, keeping simple for now)
+        // Clone to modify for print structure
+        // Enforce a specific width (e.g. 780px) to simulate a desktop/tablet view that fits nicely on A4
         const opt = {
             margin: [10, 10, 10, 10], // top, left, bottom, right
             filename: `ClientLogReport_${displayFilename.textContent}_${new Date().toISOString().split('T')[0]}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
         };
 
         // Add a temporary title for the PDF
@@ -340,20 +342,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <p style="font-size: 12px; color: #666;">Generated: ${new Date().toLocaleString()}</p>
             </div>
         `;
-        
+
         // Wrap logic to include title
         const contentContainer = document.createElement('div');
         contentContainer.appendChild(titleDiv);
         contentContainer.appendChild(element.cloneNode(true));
-        
-        // Adjust styles for PDF specific container (forcing light theme for readability or keeping dark)
-        // For this app, let's keep the dark theme aesthetic but ensure it fits
-        contentContainer.style.background = '#05070a'; 
+
+        // Adjust styles for PDF specific container
+        contentContainer.style.width = '750px'; // Force width to fit A4 portrait
+        contentContainer.style.background = '#05070a';
         contentContainer.style.color = '#e0e0e0';
         contentContainer.style.padding = '20px';
+
+        // Fix layout for PDF
         contentContainer.querySelectorAll('.glass-card').forEach(card => {
-            card.style.background = 'rgba(255, 255, 255, 0.1)'; // Slightly more opaque for PDF
+            card.style.background = 'rgba(255, 255, 255, 0.1)';
             card.style.boxShadow = 'none';
+            card.style.marginBottom = '20px';
+            card.style.pageBreakInside = 'avoid'; // Prevent card splitting
+        });
+
+        // Hide non-printable elements in PDF if any (e.g. scrollbars, interactive buttons if they were cloned)
+        contentContainer.querySelectorAll('.close-btn, .scrollable-list').forEach(el => {
+            if (el.classList.contains('scrollable-list')) {
+                el.style.maxHeight = 'none'; // Expand scrollable areas
+                el.style.overflow = 'visible';
+            }
         });
 
         html2pdf().set(opt).from(contentContainer).save().then(() => {
