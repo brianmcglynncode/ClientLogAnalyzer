@@ -132,7 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         uxBadge.className = `ux-badge rating-${data.uxSummary.rating}`;
         document.getElementById('ux-score-title').textContent = `Overall Experience: ${data.uxSummary.score}`;
         document.getElementById('ux-score-message').textContent = data.uxSummary.message;
-        document.getElementById('ux-assessment').style.borderColor = { 5: '#00ff88', 3: '#f9d423', 2: '#ff4b2b' }[data.uxSummary.rating];
+        document.getElementById('ux-score-message').textContent = data.uxSummary.message;
+        document.getElementById('ux-assessment').style.borderColor = { 10: '#00ff88', 9: '#00ff88', 6: '#f9d423', 3: '#ff4b2b' }[data.uxSummary.rating];
 
         // 1.5 Timing Metadata
         if (data.timing) {

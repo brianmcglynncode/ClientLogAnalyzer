@@ -326,17 +326,19 @@ h1 {
     font-weight: 700;
 }
 
-.rating-5 {
+.rating-10,
+.rating-9 {
     background: var(--success);
     color: #000;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
 }
 
-.rating-3 {
+.rating-6 {
     background: var(--warning);
     color: #000;
 }
 
-.rating-2 {
+.rating-3 {
     background: var(--danger);
     color: #fff;
 }

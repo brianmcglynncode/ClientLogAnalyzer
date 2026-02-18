@@ -137,7 +137,7 @@ app.get('/api/analyze', (req, res) => {
             status: 'awaiting_upload',
             currentFile: 'None (Global Dashboard)',
             metadata: { webexVersion: 'N/A', platform: 'N/A', browser: 'N/A', machine: 'N/A' },
-            uxSummary: { score: 'Ready', rating: 5, message: 'Please upload a Webex audit log file to begin real-time diagnostic analysis.' },
+            uxSummary: { score: 'Ready', rating: 10, message: 'Please upload a Webex audit log file to begin real-time diagnostic analysis.' },
             diagnostics: {
                 network: { status: 'healthy', issues: [], reachability: [], latency: [] },
                 media: { status: 'healthy', issues: [], devices: { cameras: [], microphones: [], speakers: [] } },
@@ -152,7 +152,7 @@ app.get('/api/analyze', (req, res) => {
     const results = {
         currentFile: requestedFile,
         metadata: { webexVersion: 'N/A', platform: 'N/A', browser: 'N/A', machine: 'N/A' },
-        uxSummary: { score: 'Good', rating: 5, message: 'Meeting seems successful with no major interruptions detected.' },
+        uxSummary: { score: 'Excellent', rating: 9, message: 'Meeting seems successful with no major interruptions detected.' },
         timing: { entryTime: 'N/A', exitTime: 'N/A', duration: 'N/A' },
         disconnectCount: 0,
         diagnostics: {
@@ -310,9 +310,9 @@ app.get('/api/analyze', (req, res) => {
         // 4. UX Assessment Logic
         const errorCount = rawErrors.length;
         if (criticalFailures > 0 || errorCount > 300) {
-            results.uxSummary = { score: 'Poor', rating: 2, message: 'User experienced significant technical issues, likely causing connection drops or media failures.' };
+            results.uxSummary = { score: 'Poor', rating: 3, message: 'User experienced significant technical issues, likely causing connection drops or media failures.' };
         } else if (errorCount > 100) {
-            results.uxSummary = { score: 'Fair', rating: 3, message: 'Moderate number of errors detected. The meeting was likely stable but with some minor UI or performance glitches.' };
+            results.uxSummary = { score: 'Fair', rating: 6, message: 'Moderate number of errors detected. The meeting was likely stable but with some minor UI or performance glitches.' };
         }
 
         // 5. Clustering
