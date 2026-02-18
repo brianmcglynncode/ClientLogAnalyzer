@@ -62,6 +62,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await response.json();
             console.log('[App] Received Analysis Data:', data);
             displayFilename.textContent = data.currentFile;
+
+            // Update URL with file parameter
+            if (data.currentFile) {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('file', data.currentFile);
+                window.history.pushState({}, '', newUrl);
+            }
+
             renderDashboard(data);
 
         } catch (error) {
@@ -376,7 +384,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Initial Load
-    fetchAndRender();
+    // Initial Load - Check for URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+
+    if (fileParam) {
+        console.log(`[App] Loading file from URL: ${fileParam}`);
+        fetchAndRender(fileParam);
+    } else {
+        fetchAndRender(); // Load default
+    }
 });
 
 function formatTime(ts) {
