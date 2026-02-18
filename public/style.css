@@ -223,14 +223,16 @@ h1 {
 }
 
 .active-file-large {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 800;
     margin-top: 10px;
-    padding: 10px 20px;
+    padding: 10px 30px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     display: inline-block;
+    color: var(--accent-blue);
+    text-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
 }
 
 .glass-card {

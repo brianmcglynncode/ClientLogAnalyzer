@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const data = await response.json();
             console.log('[App] Received Analysis Data:', data);
-            displayFilename.textContent = data.currentFile;
+            console.log('[App] Received Analysis Data:', data);
+            displayFilename.textContent = data.currentFile ? data.currentFile.replace(/\.(txt|log)$/i, '') : '';
 
             // Update URL with file parameter
             if (data.currentFile) {
