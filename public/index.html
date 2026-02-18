@@ -32,21 +32,15 @@
 
     <div class="container">
         <header id="meeting-header">
-            <h1 class="glow-text">ClientLogAnalyzer</h1>
+            <h1 class="glow-text">Fleet Client Log Analyzer</h1>
             <p class="subtitle">Interactive Intelligence Dashboard</p>
 
             <div class="file-load-area">
                 <input type="file" id="log-file-input" accept=".txt,.log" hidden>
-                <button id="browse-upload-btn">Upload Fleet Client Log</button>
+                <button id="browse-upload-btn">Upload</button>
                 <div class="header-main">
-                    <div class="current-file-badge">Active: <span id="display-filename">Bilal Today.txt</span></div>
-                    <div id="total-analyzed-container" class="analyzed-counter">
-                        <span class="counter-label">Files Analyzed Total:</span>
-                        <span id="total-analyzed-badge" class="counter-badge">0</span>
-                    </div>
-                    <button id="download-pdf-btn" class="icon-btn" title="Download Report as PDF">
-                        ⬇️ PDF
-                    </button>
+                    <div class="current-file-badge active-file-large">Active: <span id="display-filename">Bilal
+                            Today.txt</span></div>
                 </div>
             </div>
         </header>

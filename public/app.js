@@ -140,11 +140,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('meeting-duration').textContent = data.timing.duration;
         }
 
-        // 2. Metadata Cards & Global Counter
-        if (data.globalStats) {
-            const counterBadge = document.getElementById('total-analyzed-badge');
-            if (counterBadge) counterBadge.textContent = data.globalStats.totalFilesAnalyzed || 0;
-        }
+        // 2. Metadata Cards
+
 
         document.getElementById('browser-info').textContent = data.metadata.browser || 'N/A';
         document.getElementById('webex-version').textContent = data.metadata.webexVersion || 'N/A';
@@ -325,63 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // PDF Download Logic
-    document.getElementById('download-pdf-btn').onclick = () => {
-        const element = document.getElementById('dashboard');
-        const originalOverflow = element.style.overflow;
-        element.style.overflow = 'visible'; // Ensure full height is captured
 
-        // Clone to modify for print structure
-        // Enforce a specific width (e.g. 780px) to simulate a desktop/tablet view that fits nicely on A4
-        const opt = {
-            margin: [10, 10, 10, 10], // top, left, bottom, right
-            filename: `ClientLogReport_${displayFilename.textContent}_${new Date().toISOString().split('T')[0]}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
-        };
-
-        // Add a temporary title for the PDF
-        const titleDiv = document.createElement('div');
-        titleDiv.innerHTML = `
-            <div style="text-align: center; margin-bottom: 20px; color: #000;">
-                <h1 style="font-size: 24px; margin: 0;">Client Log Analysis Report</h1>
-                <p style="font-size: 14px; margin: 5px 0;">File: ${displayFilename.textContent}</p>
-                <p style="font-size: 12px; color: #666;">Generated: ${new Date().toLocaleString()}</p>
-            </div>
-        `;
-
-        // Wrap logic to include title
-        const contentContainer = document.createElement('div');
-        contentContainer.appendChild(titleDiv);
-        contentContainer.appendChild(element.cloneNode(true));
-
-        // Adjust styles for PDF specific container
-        contentContainer.style.width = '750px'; // Force width to fit A4 portrait
-        contentContainer.style.background = '#05070a';
-        contentContainer.style.color = '#e0e0e0';
-        contentContainer.style.padding = '20px';
-
-        // Fix layout for PDF
-        contentContainer.querySelectorAll('.glass-card').forEach(card => {
-            card.style.background = 'rgba(255, 255, 255, 0.1)';
-            card.style.boxShadow = 'none';
-            card.style.marginBottom = '20px';
-            card.style.pageBreakInside = 'avoid'; // Prevent card splitting
-        });
-
-        // Hide non-printable elements in PDF if any (e.g. scrollbars, interactive buttons if they were cloned)
-        contentContainer.querySelectorAll('.close-btn, .scrollable-list').forEach(el => {
-            if (el.classList.contains('scrollable-list')) {
-                el.style.maxHeight = 'none'; // Expand scrollable areas
-                el.style.overflow = 'visible';
-            }
-        });
-
-        html2pdf().set(opt).from(contentContainer).save().then(() => {
-            element.style.overflow = originalOverflow;
-        });
-    };
 
     // Initial Load
     // Initial Load - Check for URL parameter
